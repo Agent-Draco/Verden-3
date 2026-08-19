@@ -1,0 +1,14 @@
+{
+  "name": "verden-wrapper",
+  "version": "1.0.0",
+  "description": "OpenAPI wrapper for Verden navigation backend using native MCP protocol",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.3.1"
+  }
+}

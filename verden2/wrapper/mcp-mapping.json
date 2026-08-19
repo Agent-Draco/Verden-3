@@ -1,0 +1,8 @@
+{
+  "route": "calculate_route",
+  "search": "search_places",
+  "geocode": "geocode_address",
+  "reverseGeocode": "reverse_geocode",
+  "nearby": "nearby_places",
+  "placeDetails": "place_details"
+}

@@ -1,0 +1,421 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://xwshudgywomzztzzpxzt.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "verden-maps-mcp",
+      "version": "0.1.0",
+      "title": "Verden Maps"
+    },
+    "tools": [
+      {
+        "name": "calculate_route",
+        "title": "Calculate route",
+        "description": "Calculate Google Maps driving routes between two coordinates, including fuel-efficient alternatives when available.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "origin": {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude in decimal degrees."
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude in decimal degrees."
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ],
+              "description": "Starting coordinate."
+            },
+            "destination": {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude in decimal degrees."
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude in decimal degrees."
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ],
+              "description": "Destination coordinate."
+            }
+          },
+          "required": [
+            "origin",
+            "destination"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_places",
+        "title": "Search places",
+        "description": "Search Google Places by text query, optionally biased around a coordinate.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Place, address, business, landmark, or point of interest to search for."
+            },
+            "location": {
+              "description": "Optional coordinate used to bias nearby results.",
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude in decimal degrees."
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude in decimal degrees."
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ]
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "geocode_address",
+        "title": "Geocode address",
+        "description": "Convert an address or place name into latitude and longitude with Google Geocoding.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Address, place name, or landmark to geocode."
+            }
+          },
+          "required": [
+            "address"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "reverse_geocode",
+        "title": "Reverse geocode",
+        "description": "Convert latitude and longitude into a human-readable address with Google Geocoding.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude in decimal degrees."
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude in decimal degrees."
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ],
+              "description": "Coordinate to reverse geocode."
+            }
+          },
+          "required": [
+            "location"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "nearby_places",
+        "title": "Nearby places",
+        "description": "Find nearby Google Places around a coordinate and radius.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "description": "Latitude in decimal degrees."
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "description": "Longitude in decimal degrees."
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ],
+              "description": "Center coordinate for the nearby search."
+            },
+            "radius_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 50000,
+              "description": "Search radius in meters, up to 50000."
+            },
+            "included_types": {
+              "description": "Optional Google Places types to include, such as restaurant or park.",
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "required": [
+            "location",
+            "radius_m"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "place_details",
+        "title": "Place details",
+        "description": "Get detailed Google Places information for a place ID.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "place_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Google Places resource name or place ID."
+            }
+          },
+          "required": [
+            "place_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_trips",
+        "title": "List my trips",
+        "description": "List the signed-in user's recent Verden trips with CO₂, distance, and transport mode.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Max trips to return (default 10).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_trip",
+        "title": "Log a trip",
+        "description": "Record a completed eco trip for the signed-in Verden user.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "origin_label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "destination_label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "origin_lat": {
+              "type": "number"
+            },
+            "origin_lng": {
+              "type": "number"
+            },
+            "dest_lat": {
+              "type": "number"
+            },
+            "dest_lng": {
+              "type": "number"
+            },
+            "distance_km": {
+              "type": "number",
+              "minimum": 0
+            },
+            "duration_min": {
+              "type": "number",
+              "minimum": 0
+            },
+            "co2_kg": {
+              "type": "number",
+              "minimum": 0
+            },
+            "transport_mode": {
+              "type": "string",
+              "enum": [
+                "walk",
+                "bike",
+                "transit",
+                "car",
+                "ev"
+              ],
+              "description": "Mode of transport."
+            },
+            "route_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "origin_label",
+            "destination_label",
+            "origin_lat",
+            "origin_lng",
+            "dest_lat",
+            "dest_lng",
+            "distance_km",
+            "duration_min",
+            "co2_kg",
+            "transport_mode"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_garage_vehicles",
+        "title": "List garage vehicles",
+        "description": "List the actual vehicle names available in the Verden garage selector.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "unlock_car_with_quiz",
+        "title": "Unlock Car Token with Quiz",
+        "description": "Unlock a vehicle in the user's garage. To use this, you (the AI) MUST first ask the user this exact quiz question: 'Which transport mode has the lowest lifecycle emissions? A) Petrol, B) Diesel, C) Hybrid, D) Electric'. If the user answers 'D' (or 'Electric'), call this tool with the requested car_name (using the vehicle's display name as shown in the garage, e.g. \"Future Race Car\", \"Luxury SUV\", \"Sports Sedan\") and quiz_answer = 'D'. Available vehicles: \"Sedan\", \"Sports Sedan\", \"SUV\", \"Luxury SUV\", \"Hatchback\", \"Race Car\", \"Future Race Car\", \"Taxi\", \"Police Car\", \"Ambulance\", \"Fire Truck\", \"Garbage Truck\", \"Delivery Truck\", \"Flatbed Truck\", \"Van\", \"Pickup Truck\", \"Semi Truck\", \"Tractor\", \"Excavator\", \"Police Riot Bulldozer\", \"Standard Go-Kart\", \"Turbo Go-Kart\", \"Cruiser Go-Kart\", \"Classic Go-Kart\", \"Entry Go-Kart\", \"Mystery Box\".",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "car_name": {
+              "type": "string",
+              "description": "The display name of the vehicle to unlock, exactly as shown in the user's garage (e.g., \"Future Race Car\", \"Luxury SUV\", \"Hatchback\")."
+            },
+            "quiz_answer": {
+              "type": "string",
+              "description": "The user's answer to the quiz question (must be 'D' or 'Electric' to succeed)."
+            }
+          },
+          "required": [
+            "car_name",
+            "quiz_answer"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

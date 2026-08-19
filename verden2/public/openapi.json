@@ -1,0 +1,431 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Verden Navigation MCP Wrapper",
+    "version": "1.0.0",
+    "description": "OpenAPI specification for Verden Maps. Requests use OAuth 2.0 authorization code flow; clients without an access token should start at /oauth/authorize, sign in, complete consent, then exchange the returned code at /oauth/token.",
+    "contact": {
+      "name": "Verden"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://verden2.lovable.app",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "oauth2": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Navigation"
+    },
+    {
+      "name": "Search"
+    },
+    {
+      "name": "Geocoding"
+    },
+    {
+      "name": "Places"
+    }
+  ],
+  "paths": {
+    "/route": {
+      "post": {
+        "tags": ["Navigation"],
+        "summary": "Calculate a route",
+        "description": "Calculates the optimal route between an origin and destination and returns the JSON response from the remote MCP navigation server.",
+        "operationId": "calculateRoute",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteRequest"
+              },
+              "example": {
+                "origin": "Seattle, WA",
+                "destination": "Portland, OR"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "tags": ["Search"],
+        "summary": "Search for places",
+        "description": "Searches for places or points of interest using a text query.",
+        "operationId": "searchPlaces",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              },
+              "example": {
+                "query": "coffee",
+                "location": "San Francisco"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    },
+    "/geocode": {
+      "post": {
+        "tags": ["Geocoding"],
+        "summary": "Geocode an address",
+        "description": "Converts a street address into geographic coordinates.",
+        "operationId": "geocodeAddress",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeocodeRequest"
+              },
+              "example": {
+                "address": "1600 Amphitheatre Parkway, Mountain View, CA"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    },
+    "/reverse-geocode": {
+      "post": {
+        "tags": ["Geocoding"],
+        "summary": "Reverse geocode coordinates",
+        "description": "Converts geographic coordinates into a human-readable address.",
+        "operationId": "reverseGeocodeCoordinates",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseGeocodeRequest"
+              },
+              "example": {
+                "lat": 47.6062,
+                "lng": -122.3321
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    },
+    "/nearby": {
+      "post": {
+        "tags": ["Search"],
+        "summary": "Find nearby places",
+        "description": "Finds nearby points of interest within a specified radius.",
+        "operationId": "findNearbyPlaces",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearbyRequest"
+              },
+              "example": {
+                "lat": 47.6062,
+                "lng": -122.3321,
+                "radius": 1000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    },
+    "/place-details": {
+      "post": {
+        "tags": ["Places"],
+        "summary": "Get place details",
+        "description": "Retrieves detailed information for a place using its unique place ID.",
+        "operationId": "getPlaceDetails",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceDetailsRequest"
+              },
+              "example": {
+                "placeId": "abc123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response from the remote MCP server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error."
+          },
+          "401": {
+            "description": "Missing or invalid OAuth access token. Response includes authorization_url for clients that need to start OAuth consent."
+          },
+          "500": {
+            "description": "Internal server error."
+          },
+          "502": {
+            "description": "Remote MCP server error."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RouteRequest": {
+        "type": "object",
+        "required": ["origin", "destination"],
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "Starting location as an address, place name, place ID, or coordinates."
+          },
+          "destination": {
+            "type": "string",
+            "description": "Destination as an address, place name, place ID, or coordinates."
+          }
+        },
+        "additionalProperties": true
+      },
+      "SearchRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query or point of interest."
+          },
+          "location": {
+            "type": "string",
+            "description": "Optional location used to bias search results."
+          }
+        },
+        "additionalProperties": true
+      },
+      "GeocodeRequest": {
+        "type": "object",
+        "required": ["address"],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Street address to geocode."
+          }
+        },
+        "additionalProperties": true
+      },
+      "ReverseGeocodeRequest": {
+        "type": "object",
+        "required": ["lat", "lng"],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "Latitude in decimal degrees."
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitude in decimal degrees."
+          }
+        },
+        "additionalProperties": true
+      },
+      "NearbyRequest": {
+        "type": "object",
+        "required": ["lat", "lng", "radius"],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "Latitude in decimal degrees."
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitude in decimal degrees."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Search radius in meters."
+          }
+        },
+        "additionalProperties": true
+      },
+      "PlaceDetailsRequest": {
+        "type": "object",
+        "required": ["placeId"],
+        "properties": {
+          "placeId": {
+            "type": "string",
+            "description": "Unique identifier of the place."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://verden2.lovable.app/oauth/authorize",
+            "tokenUrl": "https://verden2.lovable.app/oauth/token",
+            "scopes": {
+              "openid": "Identify the signed-in Verden user.",
+              "profile": "Read profile details needed for consent.",
+              "email": "Read the signed-in user's email address."
+            }
+          }
+        }
+      }
+    }
+  }
+}

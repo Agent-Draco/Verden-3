@@ -1,0 +1,50 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        flatDir {
+            dirs 'capacitor-cordova-android-plugins/src/main/libs', 'app/libs'
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url 'https://api.mapbox.com/downloads/v2/releases/maven'
+                    authentication {
+                        basic(BasicAuthentication)
+                    }
+                    credentials {
+                        username = "mapbox"
+                        password = providers.gradleProperty('MAPBOX_DOWNLOADS_TOKEN').getOrNull() ?: System.getenv('MAPBOX_DOWNLOADS_TOKEN') ?: ""
+                    }
+                }
+            }
+            filter {
+                includeGroup "com.mapbox.navigation"
+                includeGroup "com.mapbox.navigationcore"
+                includeGroup "com.mapbox.maps"
+                includeGroup "com.mapbox.common"
+                includeGroup "com.mapbox.base"
+                includeGroup "com.mapbox.extension"
+                includeGroup "com.mapbox.plugin"
+                includeGroup "com.mapbox.module"
+                includeGroup "com.mapbox.annotation"
+                includeGroup "com.mapbox.mapboxsdk"
+                includeGroup "com.mapbox.search"
+                includeGroup "com.mapbox.navigator"
+            }
+        }
+    }
+}
+
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'
