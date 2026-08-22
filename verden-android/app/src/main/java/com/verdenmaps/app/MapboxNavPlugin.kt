@@ -14,6 +14,7 @@ class MapboxNavPlugin : Plugin() {
     fun startNavigation(call: PluginCall) {
         val origin = call.getObject("origin")
         val destination = call.getObject("destination")
+        val profile = call.getString("profile", "driving")
 
         if (origin == null || destination == null) {
             call.reject("Origin and Destination objects are required.")
@@ -35,6 +36,7 @@ class MapboxNavPlugin : Plugin() {
             putExtra("origin_lng", originLng)
             putExtra("dest_lat", destLat)
             putExtra("dest_lng", destLng)
+            putExtra("profile", profile)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)

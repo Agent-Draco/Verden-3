@@ -449,7 +449,7 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
     : null;
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background text-foreground select-none">
+    <div className="relative w-full h-full overflow-hidden bg-transparent text-foreground select-none">
       {/* Persistent MapCanvas */}
       <MapCanvas
         className="absolute inset-0 w-full h-full"

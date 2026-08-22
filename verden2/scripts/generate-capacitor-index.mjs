@@ -54,8 +54,8 @@ const html = `<!doctype html>
 ${cssFiles.map((f) => `    <link rel="stylesheet" href="/assets/${f}" />`).join("\n")}
 ${preloads.map((p) => `    <link rel="modulepreload" href="${p}" />`).join("\n")}
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-transparent text-foreground overflow-hidden" style="background-color: transparent;">
+    <div id="root" style="width: 100vw; height: 100vh; overflow: hidden; background-color: transparent;"></div>
     <script type="module" async src="${entryScript}"></script>
   </body>
 </html>

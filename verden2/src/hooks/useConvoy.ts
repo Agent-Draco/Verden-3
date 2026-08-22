@@ -216,7 +216,14 @@ export function useConvoy() {
         if (!u.user) throw new Error("Sign in first.");
         const { data, error } = await supabase
           .from("convoys")
-          .insert({ owner_id: u.user.id, name, cover_emoji: coverEmoji, trip_id: tripId })
+          .insert({
+            owner_id: u.user.id,
+            host_id: u.user.id,
+            name: name.trim(),
+            cover_emoji: coverEmoji,
+            trip_id: tripId,
+            is_active: false,
+          } as any)
           .select("id")
           .single();
         if (error) throw error;

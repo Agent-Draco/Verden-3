@@ -42,9 +42,14 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
       <div className="mx-auto w-full max-w-3xl space-y-8 p-6 md:p-10 flex-1">
         <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {PLAN_LABEL[plan.plan]} plan
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {PLAN_LABEL[plan.plan]} plan
+            </p>
+            <span className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              v3.2.8222026.1.1
+            </span>
+          </div>
           <h1 className="font-display text-3xl font-bold md:text-4xl">Settings</h1>
         </div>
 

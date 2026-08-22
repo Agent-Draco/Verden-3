@@ -12,6 +12,8 @@ export type UserSettings = {
   notifyConvoy: boolean;
 };
 
+const STORAGE_KEY = "verden.user_settings";
+
 const DEFAULTS: UserSettings = {
   mapMood: "explorer",
   experienceMode: "adult",
@@ -22,17 +24,43 @@ const DEFAULTS: UserSettings = {
   notifyConvoy: true,
 };
 
+function getLocalSettings(): UserSettings {
+  if (typeof window === "undefined") return DEFAULTS;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULTS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULTS, ...parsed };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+function saveLocalSettings(settings: UserSettings) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Ignore storage quota or disabled localStorage
+  }
+}
+
 /**
- * Adaptive Modes + Map Moods live in `user_settings`. The hook always resolves
- * to sensible defaults so the map renders even before the row exists.
+ * Adaptive Modes + Map Moods live in `user_settings` and are cached in `localStorage`.
+ * The hook always resolves to sensible defaults so the map renders immediately.
  */
 export function useUserSettings() {
-  const [settings, setSettings] = useState<UserSettings>(DEFAULTS);
+  const [settings, setSettings] = useState<UserSettings>(getLocalSettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // 1. Load from localStorage first
+      const local = getLocalSettings();
+      if (mounted) setSettings(local);
+
+      // 2. Fetch from Supabase if logged in
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) {
         if (mounted) setLoading(false);
@@ -49,15 +77,17 @@ export function useUserSettings() {
         const privacy = (data.privacy ?? {}) as Record<string, unknown>;
         const a11y = (data.accessibility ?? {}) as Record<string, unknown>;
         const notifications = (data.notifications ?? {}) as Record<string, unknown>;
-        setSettings({
-          mapMood: (data.map_mood as MapMood) ?? DEFAULTS.mapMood,
-          experienceMode: (data.experience_mode as ExperienceMode) ?? DEFAULTS.experienceMode,
-          voiceGuidance: (nav["voiceGuidance"] as boolean) ?? DEFAULTS.voiceGuidance,
-          shareLocation: (privacy["shareLocation"] as boolean) ?? DEFAULTS.shareLocation,
-          reduceMotion: (a11y["reduceMotion"] as boolean) ?? DEFAULTS.reduceMotion,
-          largeText: (a11y["largeText"] as boolean) ?? DEFAULTS.largeText,
-          notifyConvoy: (notifications["convoy"] as boolean) ?? DEFAULTS.notifyConvoy,
-        });
+        const serverSettings: UserSettings = {
+          mapMood: (data.map_mood as MapMood) ?? local.mapMood,
+          experienceMode: (data.experience_mode as ExperienceMode) ?? local.experienceMode,
+          voiceGuidance: (nav["voiceGuidance"] as boolean) ?? local.voiceGuidance,
+          shareLocation: (privacy["shareLocation"] as boolean) ?? local.shareLocation,
+          reduceMotion: (a11y["reduceMotion"] as boolean) ?? local.reduceMotion,
+          largeText: (a11y["largeText"] as boolean) ?? local.largeText,
+          notifyConvoy: (notifications["convoy"] as boolean) ?? local.notifyConvoy,
+        };
+        setSettings(serverSettings);
+        saveLocalSettings(serverSettings);
       }
       setLoading(false);
     })();
@@ -67,10 +97,16 @@ export function useUserSettings() {
   }, []);
 
   const update = useCallback(async (patch: Partial<UserSettings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }));
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveLocalSettings(next);
+      return next;
+    });
+
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const next = { ...settings, ...patch };
+    const current = getLocalSettings();
+    const next = { ...current, ...patch };
     await supabase.from("user_settings").upsert(
       {
         user_id: u.user.id,
@@ -83,7 +119,7 @@ export function useUserSettings() {
       },
       { onConflict: "user_id" },
     );
-  }, [settings]);
+  }, []);
 
   return { settings, loading, update };
 }
