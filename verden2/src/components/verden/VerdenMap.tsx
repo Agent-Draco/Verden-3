@@ -93,7 +93,8 @@ export default function VerdenMap({
   const callbacks = useRef({ onUserInteract, onMapClick, onSelectRoute, onPlaceClick, onMapReady });
   callbacks.current = { onUserInteract, onMapClick, onSelectRoute, onPlaceClick, onMapReady };
 
-  const token = import.meta.env["VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN"] as
+  const token = (import.meta.env["VITE_MAPBOX_ACCESS_TOKEN"] ||
+    import.meta.env["VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN"]) as
     | string
     | undefined;
 
@@ -126,10 +127,13 @@ export default function VerdenMap({
     });
     mapRef.current = map;
 
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
-    map.addControl(new mapboxgl.ScaleControl({ unit: "metric" }), "bottom-left");
+    // Trigger initial resize
+    map.on("load", () => {
+      map.resize();
+    });
 
     map.on("style.load", () => {
+      map.resize();
       // 3D terrain + atmosphere.
       if (!map.getSource("mapbox-dem")) {
         map.addSource("mapbox-dem", {
@@ -159,6 +163,14 @@ export default function VerdenMap({
 
       callbacks.current.onMapReady?.(map);
     });
+
+    // Resize observer to ensure map canvas adjusts to container dimensions
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     const flagUser = () => {
       if (!programmaticRef.current) callbacks.current.onUserInteract?.();
@@ -191,6 +203,7 @@ export default function VerdenMap({
     });
 
     return () => {
+      resizeObserver.disconnect();
       readyRef.current = false;
       modelLayerRef.current = null;
       map.remove();
@@ -313,8 +326,8 @@ export default function VerdenMap({
   }, [center, followMode]);
 
   return (
-    <div className={`${className} relative`}>
-      <div ref={containerRef} className="absolute inset-0" />
+    <div className={`${className} relative w-full h-full`}>
+      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
       {!token && (
         <div className="absolute inset-0 grid place-items-center bg-secondary text-sm text-muted-foreground">
           Map unavailable — Mapbox token missing.

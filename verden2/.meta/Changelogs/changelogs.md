@@ -1,11 +1,33 @@
-## 2026-08-19 Clean State-Driven Screen Management Refactor
+## 2026-08-22 Clean Mapbox UI Overlays, Fix Active Mode Tab Contrast, and Direct Client Geocoding (v1.8222026.1.7)
 
+- Removed native `NavigationControl` (+/- zoom, pitch) and `ScaleControl` (metric scale bar) in `VerdenMap.tsx` for a completely clean map canvas managed via React controls.
+- Enhanced active transport mode pill contrast in `MapView.tsx` with solid `bg-emerald-600 text-white` and white icons when selected.
+- Replaced server-side `/api/map/search` calls with direct client-side Mapbox Geocoding v5 API fetching in `MapView.tsx` and `MapService.ts`.
+- Implemented immediate search on Enter key and 5000ms idle debounce on typing, with dropdown rendered in `z-50` and automatic map flying (`map.flyTo`) to selected coordinates.
+- Rebuilt web assets via `npm run build`, synchronized to Capacitor Android shell via `npx cap sync android`, and compiled & exported updated `Verden3-1.apk`.
+
+## 2026-08-21 Enable Chrome DevTools WebView Inspection & Match Debug Keystore Signing
+
+- Configured `buildTypes.debug` in `verden-android/app/build.gradle` to use `signingConfig signingConfigs.release`, matching the release keystore signature so in-place updates succeed via `adb install -r`.
+- Enabled Chrome DevTools remote WebView inspection in `MainActivity.java` via `WebView.setWebContentsDebuggingEnabled(true)`.
+- Compiled and built debug APK via Gradle and exported the signed package as `Verden3-1.apk`.
+
+## 2026-08-20 Point Capacitor index.html to Standalone App Bundle
+
+- Updated `scripts/generate-capacitor-index.mjs` to build a dedicated standalone SPA bundle from `src/main.tsx` into `.output/public/assets/App-[hash].js`.
+- Configured Capacitor `index.html` generation to point `<script type="module">` directly to the compiled `App-[hash].js` bundle.
+- Completely removed TanStack Start SSR hydration client entry (`/assets/index-[hash].js`) and router chunks from the generated `index.html`.
+- Updated `src/main.tsx` to mount `<App />` directly to `#root` using `ReactDOM.createRoot`.
+- Rebuilt production assets with `npm run build` and synchronized web assets to Android Capacitor layer via `npx cap sync android`.
+
+## 2026-08-19 Clean State-Driven Screen Management & Capacitor Bootstrap Fixes
+
+- Filtered out `lazyRouteComponent`, `oauth`, and router chunk preloads in `scripts/generate-capacitor-index.mjs`, eliminating `lazyRouteComponent-*.js: Uncaught Error: Invariant failed at D`.
+- Added guarded, deferred safe-area CSS variable application in `scripts/generate-capacitor-index.mjs` ensuring `.style` is never accessed on a null DOM element.
+- Confirmed all screen overlays (`MapView`, `SettingsModal`, `TripsModal`, `ProfileModal`, `HomeModal`, `ConvoyModal`, `EcoMoovModal`, `AuthModal`, `PrivacyModal`) are pure, standalone React components with zero imports from `src/routes/*`.
 - Replaced TanStack Router screen management with lightweight, reactive `activeScreen` state switcher in `src/App.tsx`.
 - Refactored `MapView` into a persistently mounted core component, eliminating Mapbox GL canvas reloads and routing chunk loading issues (`link-*.js`).
-- Created responsive modal overlay components for Settings (`SettingsModal.tsx`), Trips (`TripsModal.tsx`), Convoy (`ConvoyModal.tsx`), Dashboard (`HomeModal.tsx`), Profile & Garage (`ProfileModal.tsx`), EcoMoov Challenges (`EcoMoovModal.tsx`), Authentication (`AuthModal.tsx`), and Privacy Policy (`PrivacyModal.tsx`).
 - Created `src/index.css` and updated `src/main.tsx` entry point to mount `<App />` directly with `<React.StrictMode>` and `<ErrorBoundary>`.
-- Replaced `<Link>` router tags and router hooks across components with state setters (`onOpenScreen` / `setActiveScreen`).
-- Removed `ClientOnly` router wrapper in `MapCanvas.tsx` with standard React browser mounting check.
 - Built production web assets with `npm run build` and synchronized them to Android Capacitor web assets in `verden-android/app/src/main/assets/public/` using `npx cap sync android`.
 
 ## 2026-08-19 TanStack Router Invariant Match Fix & Error Boundary Update

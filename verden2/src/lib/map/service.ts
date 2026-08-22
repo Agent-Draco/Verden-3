@@ -45,20 +45,83 @@ export const MapService = {
   async search(query: string, proximity?: LngLat | null, limit = 8): Promise<VerdenPlace[]> {
     const q = query.trim();
     if (q.length < 2) return [];
+    const token =
+      (import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
+        import.meta.env.VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN) as string | undefined;
+    if (!token) throw new MapServiceError("Mapbox access token is not configured.");
+
     const key = `search:${q.toLowerCase()}:${proximity ? geoKey(proximity.lng, proximity.lat, 2) : "any"}:${limit}`;
     return cached(key, TTL.search, async () => {
-      const data = await post<{ places: VerdenPlace[] }>("/api/map/search", {
-        query: q,
-        proximity: proximity ?? undefined,
-        limit,
+      const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+        q,
+      )}.json?access_token=${token}&autocomplete=true&types=poi,address,neighborhood,place&limit=${limit}${
+        proximity ? `&proximity=${proximity.lng},${proximity.lat}` : ""
+      }`;
+      const res = await fetch(endpoint);
+      if (!res.ok) {
+        throw new MapServiceError(`Search failed (${res.status}): ${res.statusText}`);
+      }
+      const data = await res.json();
+      const features = (data.features ?? []) as Array<Record<string, unknown>>;
+      return features.map((f: Record<string, unknown>) => {
+        const center = (f["center"] as [number, number] | undefined) ?? [0, 0];
+        const text = (f["text"] as string | undefined) ?? "";
+        const placeName = (f["place_name"] as string | undefined) ?? "";
+        const properties = (f["properties"] as Record<string, unknown> | undefined) ?? {};
+        const placeType = (f["place_type"] as string[] | undefined) ?? [];
+        const name = text || placeName.split(",")[0] || "Unnamed place";
+        const address = placeName;
+        const category = (properties["category"] as string | undefined) ?? placeType[0] ?? "place";
+
+        return {
+          id: (f["id"] as string | undefined) ?? `${center[0]},${center[1]}`,
+          name,
+          address,
+          lat: center[1],
+          lng: center[0],
+          category,
+          categories: placeType,
+          maki: properties["maki"] as string | undefined,
+          metadata: {
+            phone: properties["tel"] as string | undefined,
+            website: properties["website"] as string | undefined,
+          },
+        } as VerdenPlace;
       });
-      return data.places ?? [];
     });
   },
 
   async reverse(point: LngLat): Promise<VerdenPlace> {
     const key = `reverse:${geoKey(point.lng, point.lat, 4)}`;
     return cached(key, TTL.reverse, async () => {
+      const token =
+        (import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
+          import.meta.env.VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN) as string | undefined;
+      if (token) {
+        try {
+          const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${point.lng},${point.lat}.json?access_token=${token}&limit=1`;
+          const res = await fetch(endpoint);
+          if (res.ok) {
+            const data = await res.json();
+            const f = data.features?.[0];
+            if (f) {
+              const name = f.text || f.place_name?.split(",")[0] || "Dropped pin";
+              return {
+                id: f.id ?? `${point.lng},${point.lat}`,
+                name,
+                address: f.place_name ?? `${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`,
+                lat: point.lat,
+                lng: point.lng,
+                category: "place",
+                categories: f.place_type ?? [],
+                metadata: {},
+              } as VerdenPlace;
+            }
+          }
+        } catch {
+          /* ignore client geocode miss and fallback */
+        }
+      }
       const data = await post<{ place: Omit<VerdenPlace, "category" | "categories" | "metadata"> }>(
         "/api/map/reverse",
         point,
@@ -113,13 +176,84 @@ export const MapService = {
       3,
     )}:${(input.waypoints ?? []).map((w) => geoKey(w.lng, w.lat, 3)).join("|")}`;
     return cached(key, TTL.directions, async () => {
-      const data = await post<{ routes: VerdenRoute[] }>("/api/map/directions", {
-        origin: input.origin,
-        destination: input.destination,
-        waypoints: input.waypoints,
-        profile: input.profile ?? "driving",
+      try {
+        const data = await post<{ routes: VerdenRoute[] }>("/api/map/directions", {
+          origin: input.origin,
+          destination: input.destination,
+          waypoints: input.waypoints,
+          profile: input.profile ?? "driving",
+        });
+        if (data.routes && data.routes.length > 0) return data.routes;
+      } catch (err) {
+        console.warn("Server directions unavailable, falling back to direct Mapbox API:", err);
+      }
+
+      const token =
+        (import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
+          import.meta.env.VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN) as string | undefined;
+      if (!token) throw new MapServiceError("Mapbox access token is not configured.");
+
+      const profile = input.profile ?? "driving";
+      const mbProfile = profile === "driving" ? "driving-traffic" : profile;
+      const coords = [
+        `${input.origin.lng},${input.origin.lat}`,
+        ...(input.waypoints ?? []).map((w) => `${w.lng},${w.lat}`),
+        `${input.destination.lng},${input.destination.lat}`,
+      ].join(";");
+
+      const endpoint = `https://api.mapbox.com/directions/v5/mapbox/${mbProfile}/${coords}?access_token=${token}&alternatives=true&geometries=geojson&overview=full&steps=true&annotations=duration,distance&language=en`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new MapServiceError(`Directions request failed: ${res.statusText}`);
+      const data = await res.json();
+      const rawRoutes = (data.routes ?? []) as Array<any>;
+      if (rawRoutes.length === 0) throw new MapServiceError("No routes found.");
+
+      const baselineDistanceM = Math.min(...rawRoutes.map((r) => r.distance));
+      const fastestDurationS = Math.min(...rawRoutes.map((r) => r.duration));
+
+      return rawRoutes.slice(0, 3).map((r, idx) => {
+        const maneuvers = (r.legs ?? []).flatMap((leg: any) =>
+          (leg.steps ?? []).map((step: any) => ({
+            instruction: step.maneuver?.instruction ?? "Continue",
+            distanceM: step.distance,
+            durationS: step.duration,
+            type: step.maneuver?.type ?? "continue",
+            modifier: step.maneuver?.modifier,
+            lat: step.maneuver?.location?.[1] ?? 0,
+            lng: step.maneuver?.location?.[0] ?? 0,
+          })),
+        );
+        const distanceM = r.distance;
+        const durationS = r.duration;
+        const co2PerKm = profile === "driving" ? 0.12 : 0;
+        const co2Kg = +(distanceM / 1000 * co2PerKm).toFixed(2);
+        const savedCo2Kg = profile !== "driving" ? +(distanceM / 1000 * 0.12).toFixed(2) : 0;
+        const creditsEarned = Math.max(1, Math.round(distanceM / 500));
+
+        return {
+          id: `route-${idx}`,
+          profile,
+          alternativeIndex: idx,
+          distanceM,
+          durationS,
+          geometry: r.geometry.coordinates,
+          maneuvers,
+          traffic: "low",
+          weight: r.weight ?? r.duration,
+          measures: { greenScore: 0.5, shadeScore: 0.5, buildingDensity: 0.2 },
+          scores: {
+            fastest: durationS > 0 ? fastestDurationS / durationS : 1,
+            eco: distanceM > 0 ? baselineDistanceM / distanceM : 1,
+            scenic: 0.5,
+            shade: 0.5,
+            sun: 0.5,
+            "battery-saver": distanceM > 0 ? baselineDistanceM / distanceM : 1,
+          },
+          bestFor: idx === 0 ? (["fastest", "eco"] as RoutePreference[]) : [],
+          eco: { co2Kg, savedCo2Kg, creditsEarned, calories: Math.round(distanceM * 0.05), cleanAirIndex: 85 },
+          label: idx === 0 ? "Fastest & Eco" : `Alternative ${idx + 1}`,
+        } as VerdenRoute;
       });
-      return data.routes ?? [];
     });
   },
 

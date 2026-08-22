@@ -1,43 +1,96 @@
 /**
  * Generates .output/public/index.html as the Capacitor WebView entry point.
  *
- * TanStack Start builds an SSR server (no static index.html), but Capacitor
- * requires one in webDir. This reads the built Start manifest to find the
- * hashed client entry script and root stylesheet, then writes an SPA shell.
+ * Compiles a dedicated standalone SPA bundle from src/main.tsx into
+ * .output/public/assets/App-[hash].js, bypassing TanStack Start SSR hydration
+ * and TanStack Router to prevent lazyRouteComponent invariant failures in WebView.
  *
  * Runs automatically after `npm run build` (see the "postbuild" script).
  */
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { build } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 const outputDir = ".output";
 const publicDir = join(outputDir, "public");
-const serverDir = join(outputDir, "server");
+const assetsDir = join(publicDir, "assets");
 
-const manifestFile = readdirSync(serverDir).find((f) => f.startsWith("_tanstack-start-manifest"));
-if (!manifestFile) {
-  console.error("Could not find TanStack Start manifest in .output/server");
+// 1. Build dedicated standalone SPA bundle from src/main.tsx
+console.log("Building standalone Capacitor SPA bundle from src/main.tsx...");
+const buildResult = await build({
+  configFile: false,
+  publicDir: false,
+  resolve: { tsconfigPaths: true },
+  plugins: [react(), tailwindcss()],
+  build: {
+    outDir: publicDir,
+    emptyOutDir: false,
+    rollupOptions: {
+      input: {
+        App: "src/main.tsx",
+      },
+      output: {
+        entryFileNames: "assets/App-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
+      },
+    },
+  },
+});
+
+// 2. Inspect .output/public/assets/ to determine bundle entry and assets
+const assetFiles = readdirSync(assetsDir);
+
+let entryScript = null;
+if (Array.isArray(buildResult)) {
+  for (const res of buildResult) {
+    const chunk = res.output?.find((o) => o.isEntry && o.fileName.startsWith("assets/App-"));
+    if (chunk) {
+      entryScript = `/${chunk.fileName}`;
+      break;
+    }
+  }
+} else if (buildResult?.output) {
+  const chunk = buildResult.output.find((o) => o.isEntry && o.fileName.startsWith("assets/App-"));
+  if (chunk) {
+    entryScript = `/${chunk.fileName}`;
+  }
+}
+
+// Fallback: inspect assets directory directly
+if (!entryScript) {
+  const appFile = assetFiles.find((f) => f.startsWith("App-") && f.endsWith(".js"));
+  if (appFile) {
+    entryScript = `/assets/${appFile}`;
+  }
+}
+
+if (!entryScript) {
+  console.error("Could not find compiled App bundle in .output/public/assets");
   process.exit(1);
 }
-const manifest = readFileSync(join(serverDir, manifestFile), "utf8");
 
-const rootSection = manifest.slice(manifest.indexOf("__root__"));
-const scriptMatch = rootSection.match(/src:\s*"(\/assets\/[^"]+\.js)"/);
-if (!scriptMatch) {
-  console.error("Could not find client entry script in Start manifest");
-  process.exit(1);
-}
-const entryScript = scriptMatch[1];
+// Gather all CSS files (e.g. styles-*.css, app-*.css, VerdenMap-*.css)
+const cssFiles = assetFiles.filter((f) => f.endsWith(".css"));
 
-const preloads = [
-  ...rootSection.slice(0, rootSection.indexOf("scripts:")).matchAll(/"(\/assets\/[^"]+\.js)"/g),
-]
-  .map((m) => m[1])
-  .filter((p) => p !== entryScript);
-
-const cssFiles = readdirSync(join(publicDir, "assets")).filter(
-  (f) => f.startsWith("styles-") && f.endsWith(".css"),
-);
+// Gather preloadable chunks (exclude index-*, lazyRouteComponent, oauth, routes, router, etc.)
+const preloads = assetFiles
+  .filter(
+    (f) =>
+      f.endsWith(".js") &&
+      `/assets/${f}` !== entryScript &&
+      !f.startsWith("index-") &&
+      !f.includes("lazyRouteComponent") &&
+      !f.includes("oauth") &&
+      !f.includes("routes-") &&
+      !f.includes("router-") &&
+      !f.includes("_app") &&
+      !f.includes("auth-") &&
+      !f.includes("privacy-policy-")
+  )
+  .map((f) => `/assets/${f}`);
 
 const html = `<!doctype html>
 <html lang="en">
@@ -47,15 +100,35 @@ const html = `<!doctype html>
     <title>Verden Maps</title>
     <link rel="icon" href="/favicon.ico" />
     <script>
-      if (!window.location.hash || window.location.hash === '#' || window.location.hash === '') {
-        window.location.hash = '#/';
-      }
+      (function() {
+        if (!window.location.hash || window.location.hash === '#' || window.location.hash === '') {
+          window.location.hash = '#/';
+        }
+        function applySafeArea() {
+          try {
+            var el = document.getElementById('root') || document.body || document.documentElement;
+            if (el && el.style) {
+              el.style.setProperty('--sat', 'env(safe-area-inset-top, 0px)');
+              el.style.setProperty('--sab', 'env(safe-area-inset-bottom, 0px)');
+              el.style.setProperty('--sal', 'env(safe-area-inset-left, 0px)');
+              el.style.setProperty('--sar', 'env(safe-area-inset-right, 0px)');
+            }
+          } catch (e) {
+            console.warn('Safe area CSS injection deferred:', e);
+          }
+        }
+        if (document.readyState === 'loading') {
+          window.addEventListener('DOMContentLoaded', applySafeArea);
+        } else {
+          applySafeArea();
+        }
+      })();
     </script>
 ${cssFiles.map((f) => `    <link rel="stylesheet" href="/assets/${f}" />`).join("\n")}
 ${preloads.map((p) => `    <link rel="modulepreload" href="${p}" />`).join("\n")}
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-background text-foreground overflow-hidden">
+    <div id="root" style="width: 100vw; height: 100vh; overflow: hidden;"></div>
     <script type="module" async src="${entryScript}"></script>
   </body>
 </html>
@@ -63,3 +136,4 @@ ${preloads.map((p) => `    <link rel="modulepreload" href="${p}" />`).join("\n")
 
 writeFileSync(join(publicDir, "index.html"), html);
 console.log(`Generated ${join(publicDir, "index.html")} (entry: ${entryScript})`);
+

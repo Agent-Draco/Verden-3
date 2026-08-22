@@ -17,8 +17,24 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    buildTypes {
+
+    signingConfigs {
         release {
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+        }
+        release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -40,8 +56,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
 
     // Mapbox Navigation SDK v3
-    implementation "com.mapbox.navigationcore:android-ndk27:3.27.0"
-    implementation "com.mapbox.navigationcore:android-auto-components-ndk27:3.27.0"
+    implementation "com.mapbox.navigationcore:android:3.3.0"
+    implementation "com.mapbox.navigationcore:ui-components:3.3.0"
+    implementation "com.mapbox.maps:android:11.3.0"
 
     // Android Auto App Library
     implementation "androidx.car.app:app:1.4.0"
@@ -49,7 +66,6 @@ dependencies {
     // Constraint Layout for navigation layout
     implementation "androidx.constraintlayout:constraintlayout:2.2.0"
 }
-
 
 apply from: 'capacitor.build.gradle'
 

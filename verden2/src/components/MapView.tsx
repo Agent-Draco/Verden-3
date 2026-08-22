@@ -126,6 +126,7 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
   const [arrival, setArrival] = useState<{ savedCo2: number; credits: number } | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
 
+  const mapInstanceRef = useRef<any>(null);
   const watchRef = useRef<number | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const announcedRef = useRef(-1);
@@ -165,26 +166,107 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
   }, []);
 
   /* ------------------------------------------------------------- search */
-  useEffect(() => {
-    if (query.trim().length < 3) {
-      setResults([]);
-      return;
-    }
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    setSearching(true);
-    searchTimer.current = setTimeout(async () => {
+  const performSearch = useCallback(
+    async (searchQuery: string) => {
+      const q = searchQuery.trim();
+      if (q.length < 2) {
+        setResults([]);
+        return;
+      }
+      if (searchTimer.current) {
+        clearTimeout(searchTimer.current);
+        searchTimer.current = null;
+      }
+      const token =
+        (import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
+          import.meta.env.VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN) as string | undefined;
+      if (!token) {
+        toast.error("Mapbox token is missing.");
+        return;
+      }
+
+      setSearching(true);
       try {
-        setResults(await MapService.search(query, origin));
+        const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          q,
+        )}.json?access_token=${token}&autocomplete=true&types=poi,address,neighborhood,place${
+          origin ? `&proximity=${origin.lng},${origin.lat}` : ""
+        }`;
+
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          throw new Error(`Search error: ${res.statusText}`);
+        }
+        const data = await res.json();
+        const features = data.features || [];
+        const places: VerdenPlace[] = features.map((f: any) => {
+          const [lng, lat] = f.center || f.geometry?.coordinates || [0, 0];
+          const name = f.text || f.place_name?.split(",")[0] || "Unnamed place";
+          const address = f.place_name || "";
+          const category = f.properties?.category || f.place_type?.[0] || "place";
+          return {
+            id: f.id || `${lng},${lat}`,
+            name,
+            address,
+            lat,
+            lng,
+            category,
+            categories: f.place_type || [],
+            maki: f.properties?.maki,
+            metadata: {
+              phone: f.properties?.tel,
+              website: f.properties?.website,
+            },
+          };
+        });
+        setResults(places);
+        if (places.length === 0) {
+          toast.info("No places found for this search.");
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Search failed.");
       } finally {
         setSearching(false);
       }
-    }, 350);
+    },
+    [origin],
+  );
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    if (searchTimer.current) {
+      clearTimeout(searchTimer.current);
+      searchTimer.current = null;
+    }
+    if (val.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    // 5-second idle debounce
+    searchTimer.current = setTimeout(() => {
+      void performSearch(val);
+    }, 5000);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchTimer.current) {
+        clearTimeout(searchTimer.current);
+        searchTimer.current = null;
+      }
+      void performSearch(query);
+    }
+  };
+
+  useEffect(() => {
     return () => {
-      if (searchTimer.current) clearTimeout(searchTimer.current);
+      if (searchTimer.current) {
+        clearTimeout(searchTimer.current);
+        searchTimer.current = null;
+      }
     };
-  }, [query, origin]);
+  }, []);
 
   /* ----------------------------------------------------------- routing */
   const selectedRoute = useMemo(
@@ -232,6 +314,15 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
     setResults([]);
     setRoutes([]);
     setSelectedRouteId(null);
+    setFollowMode(false);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo({
+        center: [place.lng, place.lat],
+        zoom: 15,
+        duration: 1500,
+        essential: true,
+      });
+    }
     void calculate(place);
   }
 
@@ -469,6 +560,9 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
         followMode={followMode}
         onUserInteract={() => setFollowMode(false)}
         onPlaceClick={pickPlace}
+        onMapReady={(map) => {
+          mapInstanceRef.current = map;
+        }}
         onMapClick={async (point) => {
           if (isNavigating) return;
           try {
@@ -481,34 +575,39 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
 
       {/* Top Floating Bar: Search & Quick Navigation */}
       {!isNavigating && (
-        <div className="absolute inset-x-3 top-3 z-30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pointer-events-none">
+        <div className="absolute inset-x-3 top-3 z-50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pointer-events-none">
           {/* Search Box */}
           <div className="w-full md:max-w-md pointer-events-auto">
-            <div className="glass flex items-center gap-2 rounded-2xl px-4 py-3 shadow-lg">
+            <div className="glass flex items-center gap-2 rounded-2xl px-4 py-3 shadow-lg bg-background/90 backdrop-blur-md border border-border/50">
               <Search size={18} className="text-muted-foreground" />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder={kidMode ? "Where to?" : "Search a place, address or landmark"}
                 aria-label="Search destinations"
                 className={`flex-1 bg-transparent outline-none placeholder:text-muted-foreground ${
                   kidMode || settings.largeText ? "text-lg" : "text-sm"
                 }`}
               />
-              {searching && <Loader2 size={16} className="animate-spin text-muted-foreground" />}
+              {searching && <Loader2 size={16} className="animate-spin text-primary" />}
               {query && (
                 <button
                   type="button"
                   aria-label="Clear search"
                   onClick={() => {
+                    if (searchTimer.current) {
+                      clearTimeout(searchTimer.current);
+                      searchTimer.current = null;
+                    }
                     setQuery("");
                     setResults([]);
                     setDestination(null);
                     setRoutes([]);
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer p-1 text-muted-foreground hover:text-foreground"
                 >
-                  <X size={16} className="text-muted-foreground" />
+                  <X size={16} />
                 </button>
               )}
             </div>
@@ -523,11 +622,13 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
                     setProfile(option.id);
                     if (destination) void calculate(destination);
                   }}
-                  className={`glass flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition cursor-pointer ${
-                    profile === option.id ? "gradient-eco text-white" : "text-muted-foreground"
+                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-md transition cursor-pointer ${
+                    profile === option.id
+                      ? "bg-emerald-600 text-white shadow-emerald-900/20"
+                      : "glass text-foreground/80 hover:text-foreground hover:bg-secondary/80"
                   }`}
                 >
-                  <option.icon size={14} />
+                  <option.icon size={14} className={profile === option.id ? "text-white" : "text-muted-foreground"} />
                   {option.label}
                 </button>
               ))}
@@ -535,15 +636,15 @@ export default function MapView({ onOpenScreen, activeScreen = "map" }: MapViewP
 
             {/* Search Results Dropdown */}
             {results.length > 0 && (
-              <ul className="glass mt-2 max-h-72 divide-y divide-border/50 overflow-auto rounded-2xl shadow-lg">
+              <ul className="glass relative z-50 mt-2 max-h-72 divide-y divide-border/50 overflow-auto rounded-2xl shadow-2xl bg-background/95 backdrop-blur-md border border-border/60">
                 {results.map((place) => (
                   <li key={place.id}>
                     <button
                       type="button"
                       onClick={() => pickPlace(place)}
-                      className="w-full px-4 py-3 text-left hover:bg-secondary/70 cursor-pointer"
+                      className="w-full px-4 py-3 text-left hover:bg-secondary/80 transition-colors cursor-pointer"
                     >
-                      <p className="font-display text-sm font-semibold">{place.name}</p>
+                      <p className="font-display text-sm font-semibold text-foreground">{place.name}</p>
                       <p className="truncate text-xs text-muted-foreground">{place.address}</p>
                     </button>
                   </li>
