@@ -47,7 +47,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
               {PLAN_LABEL[plan.plan]} plan
             </p>
             <span className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
-              v3.2.8222026.1.1
+              v3.2.8222026.2.7
             </span>
           </div>
           <h1 className="font-display text-3xl font-bold md:text-4xl">Settings</h1>

@@ -9,7 +9,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "3.2.8222026.1.1"
+        versionName "3.2.8222026.2.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -42,6 +42,9 @@ dependencies {
     // Mapbox Navigation SDK v3
     implementation "com.mapbox.navigationcore:android-ndk27:3.27.0"
     implementation "com.mapbox.navigationcore:android-auto-components-ndk27:3.27.0"
+
+    // Mapbox Search SDK
+    implementation "com.mapbox.search:mapbox-search-android-ui-ndk27:2.27.0"
 
     // Android Auto App Library
     implementation "androidx.car.app:app:1.4.0"

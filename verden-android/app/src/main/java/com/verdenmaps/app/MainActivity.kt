@@ -23,7 +23,8 @@ class MainActivity : BridgeActivity() {
         MapboxOptions.accessToken = token
 
         // Make Capacitor WebView transparent to let native MapView show underneath
-        bridge?.webView?.setBackgroundColor(Color.TRANSPARENT)
+        bridge.webView?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        bridge.webView?.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
 
         mapView = findViewById(R.id.mapView)
         mapView?.let { map ->

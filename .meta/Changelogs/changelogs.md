@@ -1,3 +1,13 @@
+## 2026-08-22 Fix Invisible Map Layer, Launcher Icon Mipmaps & Integrate Mapbox Search SDK (v3.2.8222026.2.7)
+
+- Configured fully transparent WebView background and hardware acceleration in `MainActivity.kt` (`Color.TRANSPARENT`, `LAYER_TYPE_HARDWARE`) and `capacitor.config.ts`.
+- Added CSS transparency overrides (`html, body, #root, #app { background-color: transparent !important; background: transparent !important; }`) across `styles.css`, `index.css`, and `generate-capacitor-index.mjs`.
+- Fixed React layout containers in `App.tsx` and removed opaque background blockers to ensure underlying hardware-accelerated Native `MapView` is visible.
+- Verified app launcher mipmap icons across all densities (`ic_launcher.png`, `ic_launcher_round.png`, `ic_launcher_foreground.png`) and verified manifest configuration.
+- Integrated official Mapbox Search SDK `com.mapbox.search:mapbox-search-android-ui:2.1.0` and implemented `searchPlaces(query, latitude, longitude)` with proximity bias in `MapboxNavPlugin.kt` and `MapboxBridge.ts`.
+- Updated version strings across `package.json`, `build.gradle`, and Settings badge to `v3.2.8222026.2.7`.
+- Built web assets, synced Capacitor Android shell, compiled debug APK with clean build, and exported to `C:\Users\Malav Patel\Desktop\Verden-v3.2.8222026.2.7.apk`.
+
 ## 2026-08-22 Native Mapbox SDK Engine, 3D Model Puck, Local Search Proximity & Navigation Bridge (v3.2.8222026.1.1)
 
 - Migrated persistent map rendering to Native Android `com.mapbox.maps.MapView` beneath Capacitor WebView with hardware Z-depth buffering and lifecycle binding in `MainActivity.kt`.

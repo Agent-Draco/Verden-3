@@ -53,6 +53,12 @@ const html = `<!doctype html>
     </script>
 ${cssFiles.map((f) => `    <link rel="stylesheet" href="/assets/${f}" />`).join("\n")}
 ${preloads.map((p) => `    <link rel="modulepreload" href="${p}" />`).join("\n")}
+    <style>
+      html, body, #root, #app {
+        background-color: transparent !important;
+        background: transparent !important;
+      }
+    </style>
   </head>
   <body class="bg-transparent text-foreground overflow-hidden" style="background-color: transparent;">
     <div id="root" style="width: 100vw; height: 100vh; overflow: hidden; background-color: transparent;"></div>

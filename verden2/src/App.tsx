@@ -37,14 +37,14 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenType>("map");
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-transparent">
-      {/* Map View remains persistent across all screens once authenticated */}
-      {user && (
-        <MapView
-          onOpenScreen={(screen) => setActiveScreen(screen)}
-          activeScreen={activeScreen}
-        />
-      )}
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <div className="relative w-screen h-screen overflow-hidden bg-transparent">
+          {/* Map View remains persistent across all screens */}
+          <MapView
+            onOpenScreen={(screen) => setActiveScreen(screen)}
+            activeScreen={activeScreen}
+          />
 
           {/* Overlays / Pages */}
           {activeScreen === "settings" && (
