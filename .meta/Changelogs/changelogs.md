@@ -6,6 +6,7 @@
 - Verified app launcher mipmap icons across all densities (`ic_launcher.png`, `ic_launcher_round.png`, `ic_launcher_foreground.png`) and verified manifest configuration.
 - Integrated official Mapbox Search SDK `com.mapbox.search:mapbox-search-android-ui:2.1.0` and implemented `searchPlaces(query, latitude, longitude)` with proximity bias in `MapboxNavPlugin.kt` and `MapboxBridge.ts`.
 - Updated version strings across `package.json`, `build.gradle`, and Settings badge to `v3.2.8222026.2.7`.
+- Restored `RouterProvider` in `App.tsx` with root `MainLayout` wrapping `MapView` and modal components to fix TanStack Router context invariant assertions.
 - Built web assets, synced Capacitor Android shell, compiled debug APK with clean build, and exported to `C:\Users\Malav Patel\Desktop\Verden-v3.2.8222026.2.7.apk`.
 
 ## 2026-08-22 Native Mapbox SDK Engine, 3D Model Puck, Local Search Proximity & Navigation Bridge (v3.2.8222026.1.1)
